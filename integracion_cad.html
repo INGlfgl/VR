@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Submarino CAD - Realidad Aumentada</title>
+    <script src="https://aframe.io/releases/1.4.1/aframe.min.js"></script>
+    <style>
+      body { margin: 0; background: #001e3e; }
+ 
+      #ar-button {
+        position: fixed;
+        bottom: 30px;
+        left: 50%;
+        transform: translateX(-50%);
+        z-index: 999;
+        padding: 14px 32px;
+        background: rgba(0, 120, 255, 0.85);
+        color: white;
+        border: none;
+        border-radius: 50px;
+        font-size: 16px;
+        font-family: sans-serif;
+        cursor: pointer;
+        backdrop-filter: blur(8px);
+        box-shadow: 0 4px 20px rgba(0,120,255,0.4);
+        display: none;
+      }
+ 
+      #no-ar-msg {
+        position: fixed;
+        bottom: 30px;
+        left: 50%;
+        transform: translateX(-50%);
+        z-index: 999;
+        padding: 10px 20px;
+        background: rgba(0,0,0,0.5);
+        color: #aaa;
+        border-radius: 20px;
+        font-size: 13px;
+        font-family: sans-serif;
+        display: none;
+      }
+    </style>
+  </head>
+  <body>
+ 
+    <button id="ar-button">📷 Entrar en AR</button>
+    <div id="no-ar-msg">Tu dispositivo no soporta AR</div>
+ 
+    <a-scene
+      id="scene"
+      background="color: #001e3e"
+      renderer="antialias: true; colorManagement: true;"
+      webxr="requiredFeatures: hit-test; optionalFeatures: dom-overlay; overlayElement: #ar-button;"
+    >
+      <a-assets>
+        <a-asset-item id="submarino" src="submarino.glb"></a-asset-item>
+      </a-assets>
+ 
+      <!-- Modelo del submarino -->
+      <a-entity
+        id="modelo"
+        gltf-model="#submarino"
+        position="0 1.2 -5"
+        scale="0.1 0.1 0.1"
+        rotation="0 45 0">
+      </a-entity>
+ 
+      <!-- Sky solo visible en modo VR/escritorio, se oculta en AR -->
+      <a-sky id="sky" color="#001e3e"></a-sky>
+ 
+      <a-entity light="type: ambient; intensity: 0.8;"></a-entity>
+      <a-entity light="type: directional; intensity: 1.2;" position="1 10 3"></a-entity>
+    </a-scene>
+ 
+    <script>
+      const scene = document.getElementById('scene');
+      const sky = document.getElementById('sky');
+      const arButton = document.getElementById('ar-button');
+      const noArMsg = document.getElementById('no-ar-msg');
+ 
+      // Detectar soporte de WebXR AR
+      if (navigator.xr) {
+        navigator.xr.isSessionSupported('immersive-ar').then((supported) => {
+          if (supported) {
+            arButton.style.display = 'block';
+          } else {
+            noArMsg.style.display = 'block';
+          }
+        });
+      } else {
+        noArMsg.style.display = 'block';
+      }
+ 
+      // Al entrar en AR: ocultar el sky y poner fondo transparente
+      scene.addEventListener('enter-vr', () => {
+        if (scene.is('ar-mode')) {
+          // Fondo transparente para ver la cámara
+          scene.setAttribute('background', 'color: transparent');
+          sky.setAttribute('visible', false);
+ 
+          // Hacer el renderer transparente
+          const renderer = scene.renderer;
+          if (renderer) {
+            renderer.setClearAlpha(0);
+            renderer.setClearColor(0x000000, 0);
+          }
+        }
+      });
+ 
+      // Al salir de AR: restaurar el fondo azul y el sky
+      scene.addEventListener('exit-vr', () => {
+        scene.setAttribute('background', 'color: #001e3e');
+        sky.setAttribute('visible', true);
+ 
+        const renderer = scene.renderer;
+        if (renderer) {
+          renderer.setClearAlpha(1);
+          renderer.setClearColor(0x001e3e, 1);
+        }
+      });
+ 
+      // Botón AR personalizado
+      arButton.addEventListener('click', () => {
+        if (scene.is('ar-mode')) {
+          scene.exitVR();
+        } else {
+          scene.enterAR();
+        }
+      });
+ 
+      // Actualizar texto del botón
+      scene.addEventListener('enter-vr', () => {
+        if (scene.is('ar-mode')) arButton.textContent = '✖ Salir de AR';
+      });
+      scene.addEventListener('exit-vr', () => {
+        arButton.textContent = '📷 Entrar en AR';
+      });
+    </script>
+  </body>
+</html>
